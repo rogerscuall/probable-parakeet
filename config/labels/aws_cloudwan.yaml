@@ -1,0 +1,341 @@
+slug: aws_cloudwan
+name: AWS Cloud WAN
+description: Design configuration for AWS Cloud WAN network architecture
+version: "1.0.0"
+
+labels:
+  # Core Network - Required
+  - id: core_network
+    name: Core Network
+    description: Base Cloud WAN core network configuration
+    explanation: |
+      The Core Network is the foundation of your AWS Cloud WAN deployment.
+      It defines the global network that spans multiple AWS Regions and
+      provides centralized network management.
+
+      **Key Components:**
+      - ASN (Autonomous System Number) for BGP routing
+      - Inside CIDR blocks for internal addressing
+      - Edge locations (AWS Regions) where the network operates
+
+      This is a required component for any Cloud WAN design.
+    required: true
+    default: true
+    menu:
+      group: Core Infrastructure
+      order: 1
+    content:
+      markdown_files:
+        - Overview.md
+        - CloudWANCoreNetworks.md
+      xlsx_sheets:
+        - CoreNetwork
+      validation:
+        - sheet: CoreNetwork
+          column: region
+          field_type: aws_region
+          required: true
+        - sheet: CoreNetwork
+          column: inside_cidr_blocks
+          field_type: cidr_list
+          required: true
+        - sheet: CoreNetwork
+          column: asn
+          field_type: asn
+          required: true
+
+  # Segments - Required
+  - id: segments
+    name: Segments
+    description: Network segmentation configuration
+    explanation: |
+      Segments provide logical isolation within your Cloud WAN.
+      They allow you to group VPCs and other attachments based on
+      business requirements, security policies, or traffic patterns.
+
+      **Common Segment Types:**
+      - Production segment for production workloads
+      - Development segment for dev/test environments
+      - Shared Services segment for common services
+      - DMZ segment for internet-facing workloads
+
+      Each segment can have its own routing and connectivity policies.
+    required: true
+    default: true
+    depends_on:
+      - core_network
+    menu:
+      group: Core Infrastructure
+      order: 2
+    content:
+      markdown_files:
+        - CloudWANSegments.md
+      xlsx_sheets:
+        - Segments
+      validation:
+        - sheet: Segments
+          column: name
+          field_type: identifier
+          required: true
+        - sheet: Segments
+          column: edge_locations
+          field_type: aws_region_list
+          required: true
+        - sheet: Segments
+          column: isolate_attachments
+          field_type: yes_no
+          required: true
+        - sheet: Segments
+          column: require_attachment_acceptance
+          field_type: yes_no
+          required: true
+
+  # Segment Sharing - Optional
+  - id: segment_sharing
+    name: Segment Sharing
+    description: Enable connectivity between segments
+    explanation: |
+      Segment Sharing allows controlled communication between different
+      network segments. By default, segments are isolated from each other.
+
+      **Use Cases:**
+      - Allow production to access shared services
+      - Enable development to reach certain production resources
+      - Create hub-and-spoke connectivity patterns
+
+      Sharing is bidirectional and requires explicit configuration
+      for each segment pair that needs to communicate.
+    required: false
+    default: true
+    depends_on:
+      - segments
+    menu:
+      group: Connectivity
+      order: 10
+    content:
+      markdown_files:
+        - SegmentSharing.md
+      xlsx_sheets:
+        - SegmentSharing
+      validation:
+        - sheet: SegmentSharing
+          column: segment_a
+          field_type: identifier
+          required: true
+        - sheet: SegmentSharing
+          column: segment_b
+          field_type: identifier
+          required: true
+        - sheet: SegmentSharing
+          column: sharing_enabled
+          field_type: yes_no
+          required: true
+
+  # Static Routes - Optional
+  - id: static_routes
+    name: Static Routes
+    description: Configure static routing within segments
+    explanation: |
+      Static Routes allow you to define explicit routing paths
+      within your Cloud WAN segments. This is useful for:
+
+      **Common Scenarios:**
+      - Routing traffic to on-premises networks via Transit Gateway
+      - Directing traffic to specific NAT instances or firewalls
+      - Creating blackhole routes for traffic filtering
+      - Overriding default routing behavior
+
+      Routes can be configured per-segment and per-region.
+    required: false
+    default: false
+    depends_on:
+      - segments
+    menu:
+      group: Connectivity
+      order: 11
+    content:
+      markdown_files:
+        - SegmentStaticRouting.md
+      xlsx_sheets:
+        - StaticRoutes
+      validation:
+        - sheet: StaticRoutes
+          column: segment
+          field_type: identifier
+          required: true
+        - sheet: StaticRoutes
+          column: route_type
+          field_type: enum
+          options:
+            - static
+            - blackhole
+          required: true
+        - sheet: StaticRoutes
+          column: prefix
+          field_type: cidr
+          required: true
+        - sheet: StaticRoutes
+          column: region
+          field_type: aws_region
+          required: true
+
+  # Network Function Groups - Optional
+  - id: network_function_groups
+    name: Network Function Groups
+    description: Service insertion with network appliances
+    explanation: |
+      Network Function Groups (NFGs) enable service insertion,
+      allowing you to route traffic through network appliances
+      such as firewalls, IDS/IPS, or load balancers.
+
+      **Architecture:**
+      - Define groups of network functions (e.g., firewall cluster)
+      - Configure traffic to flow through these appliances
+      - Support for inspection, filtering, and transformation
+
+      This is commonly used for centralized security inspection.
+    required: false
+    default: false
+    depends_on:
+      - segments
+    menu:
+      group: Security
+      order: 20
+    content:
+      markdown_files:
+        - ServiceInsertionAndNetworkFunctionGroup.md
+      xlsx_sheets:
+        - NetworkFunctionGroups
+      validation:
+        - sheet: NetworkFunctionGroups
+          column: name
+          field_type: identifier
+          required: true
+        - sheet: NetworkFunctionGroups
+          column: require_attachment_acceptance
+          field_type: yes_no
+          required: true
+
+  # NFG Send Via - Optional
+  - id: nfg_send_via
+    name: NFG Send Via
+    description: Route traffic between segments via network functions
+    explanation: |
+      Send Via routes configure traffic between two segments
+      to pass through a Network Function Group for inspection.
+
+      **Example Flow:**
+      Production → Firewall NFG → Shared Services
+
+      This ensures all traffic between segments is inspected
+      by your security appliances before reaching the destination.
+    required: false
+    default: false
+    depends_on:
+      - network_function_groups
+    menu:
+      group: Security
+      order: 21
+    content:
+      xlsx_sheets:
+        - NFGSendVia
+      validation:
+        - sheet: NFGSendVia
+          column: segment_a
+          field_type: identifier
+          required: true
+        - sheet: NFGSendVia
+          column: segment_b
+          field_type: identifier
+          required: true
+        - sheet: NFGSendVia
+          column: nfg
+          field_type: identifier
+          required: true
+
+  # NFG Send To - Optional
+  - id: nfg_send_to
+    name: NFG Send To
+    description: Route segment traffic to network functions
+    explanation: |
+      Send To routes direct traffic from a segment to a
+      Network Function Group as the final destination.
+
+      **Use Cases:**
+      - Sending traffic to a centralized NAT gateway
+      - Routing to a forward proxy for egress filtering
+      - Directing to load balancers for service distribution
+
+      Unlike Send Via, traffic terminates at the NFG.
+    required: false
+    default: false
+    depends_on:
+      - network_function_groups
+    menu:
+      group: Security
+      order: 22
+    content:
+      xlsx_sheets:
+        - NFGSendTo
+      validation:
+        - sheet: NFGSendTo
+          column: segment
+          field_type: identifier
+          required: true
+        - sheet: NFGSendTo
+          column: nfg
+          field_type: identifier
+          required: true
+
+  # Monitoring - Optional
+  - id: monitoring
+    name: Monitoring
+    description: Enable CloudWatch monitoring and metrics
+    explanation: |
+      Monitoring enables CloudWatch integration for your Cloud WAN,
+      providing visibility into network performance and health.
+
+      **Available Metrics:**
+      - Bytes In/Out per attachment
+      - Packets In/Out per attachment
+      - Attachment status and health
+      - Segment-level traffic aggregation
+
+      Recommended for production deployments to enable
+      troubleshooting and capacity planning.
+    required: false
+    default: true
+    depends_on:
+      - core_network
+    menu:
+      group: Operations
+      order: 30
+    content:
+      markdown_files:
+        - Monitoring.md
+
+  # Ingress Design - Optional
+  - id: ingress_design
+    name: Ingress Design
+    description: Internet ingress architecture patterns
+    explanation: |
+      Ingress Design covers patterns for handling inbound
+      internet traffic to your Cloud WAN connected workloads.
+
+      **Common Patterns:**
+      - Centralized ingress through shared load balancers
+      - Distributed ingress at each spoke VPC
+      - Hybrid patterns with regional entry points
+
+      This section provides guidance on choosing and
+      implementing the right ingress strategy.
+    required: false
+    default: false
+    depends_on:
+      - segments
+    menu:
+      group: Design Patterns
+      order: 40
+    content:
+      markdown_files:
+        - IngressDesign.md

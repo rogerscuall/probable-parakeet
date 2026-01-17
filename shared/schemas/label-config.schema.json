@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Label Configuration",
+  "description": "Schema for design type label configuration files",
+  "type": "object",
+  "required": ["slug", "name", "labels"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Unique identifier for the design type",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for the design type"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the design type"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of this configuration",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "labels": {
+      "type": "array",
+      "description": "List of label definitions",
+      "items": {
+        "$ref": "#/definitions/label"
+      }
+    }
+  },
+  "definitions": {
+    "label": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the label",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Detailed explanation with markdown support"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether this label must be selected",
+          "default": false
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Whether this label is selected by default",
+          "default": false
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of label IDs this label depends on",
+          "items": {
+            "type": "string"
+          }
+        },
+        "menu": {
+          "$ref": "#/definitions/menuConfig"
+        },
+        "content": {
+          "$ref": "#/definitions/contentConfig"
+        }
+      }
+    },
+    "menuConfig": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "type": "string",
+          "description": "Menu group name for UI organization"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Display order within the group"
+        }
+      }
+    },
+    "contentConfig": {
+      "type": "object",
+      "properties": {
+        "markdown_files": {
+          "type": "array",
+          "description": "List of markdown files to include",
+          "items": {
+            "type": "string"
+          }
+        },
+        "xlsx_sheets": {
+          "type": "array",
+          "description": "List of XLSX sheet names",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation": {
+          "type": "array",
+          "description": "Field validation rules",
+          "items": {
+            "$ref": "#/definitions/fieldValidation"
+          }
+        }
+      }
+    },
+    "fieldValidation": {
+      "type": "object",
+      "required": ["sheet", "column", "field_type"],
+      "properties": {
+        "sheet": {
+          "type": "string",
+          "description": "XLSX sheet name"
+        },
+        "column": {
+          "type": "string",
+          "description": "Column name to validate"
+        },
+        "field_type": {
+          "type": "string",
+          "description": "Type of validation",
+          "enum": ["aws_region", "aws_region_list", "cidr", "cidr_list", "asn", "identifier", "yes_no", "enum"]
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether the field is required"
+        },
+        "options": {
+          "type": "array",
+          "description": "Valid options for enum type",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

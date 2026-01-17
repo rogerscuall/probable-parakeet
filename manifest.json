@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-16T00:00:00Z",
+  "designTypes": [
+    {
+      "slug": "aws_cloudwan",
+      "name": "AWS Cloud WAN",
+      "latestVersion": "v1.0.0",
+      "versions": [
+        {
+          "version": "v1.0.0",
+          "releaseDate": "2026-01-16",
+          "status": "stable",
+          "minAppVersion": "1.0.0"
+        }
+      ]
+    }
+  ],
+  "shared": {
+    "version": "1.0.0"
+  }
+}
