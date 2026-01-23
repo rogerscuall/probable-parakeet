@@ -1,0 +1,145 @@
+slug: aws_transit_gateway
+name: AWS Transit Gateway
+description: Single-region Transit Gateway design for existing landing zones
+version: "1.0.0"
+
+labels:
+  # 1. Core Service - Required
+  - id: tgw_core
+    name: Core TGW Infrastructure
+    description: Base Transit Gateway deployment in a single region
+    explanation: |
+      Deploys the AWS Transit Gateway service to a single region in an existing client account.
+      Includes permission configuration.
+
+      **Common Scenarios:**
+      - Establishing a centralized regional network hub
+      - Replacing complex VPC peering meshes with a hub-and-spoke topology
+      - Preparing a foundation for future multi-region expansion
+    required: true
+    default: true
+    menu:
+      group: Core Infrastructure
+      order: 1
+    content:
+      xlsx_sheets: [ "CoreTGW" ] # Placeholder
+
+  # 2. TGW Configuration - Required
+  - id: tgw_configuration
+    name: TGW Settings
+    description: MTU, Encryption, and Propagation settings
+    explanation: |
+      Configures global TGW attributes including:
+      - Default route table association/propagation
+      - DNS support
+      - VPN ECMP support
+      - MTU size
+      - Tagging strategies
+
+      **Common Scenarios:**
+      - Enforcing standardized tagging for cost allocation and automation
+      - Optimizing MTU (e.g., 8500 bytes) for high-throughput workloads
+      - Enabling ECMP to scale VPN bandwidth across multiple tunnels
+    required: true
+    default: true
+    depends_on:
+      - tgw_core
+    menu:
+      group: Core Infrastructure
+      order: 2
+    content:
+      xlsx_sheets: [ "TGWSettings" ] # Placeholder
+
+  # 3. Route Tables - Optional
+  - id: route_tables
+    name: Route Tables
+    description: Custom route tables and static routes
+    explanation: |
+      Configure up to (4) TGW route tables.
+      Support for up to (12) additional static routes per table.
+
+      **Common Scenarios:**
+      - Routing traffic to on-premises networks via Transit Gateway
+      - Directing traffic to specific NAT instances or firewalls
+      - Creating blackhole routes for traffic filtering
+      - Overriding default routing behavior
+    required: false
+    default: true
+    depends_on:
+      - tgw_core
+    menu:
+      group: Routing
+      order: 10
+    content:
+      xlsx_sheets: [ "RouteTables" ] # Placeholder
+
+  # 4. VPC Attachments - Optional
+  - id: vpc_attachments
+    name: VPC Attachments
+    description: Attach existing spoke VPCs
+    explanation: |
+      Attach up to (8) existing spoke VPCs to the TGW.
+      Includes configuration of necessary AZ attachments and updates to
+      up to (3) VPC route tables per VPC to support connectivity.
+
+      **Common Scenarios:**
+      - Integrating isolated workload VPCs (Dev, Test, Prod) into the network
+      - Connecting Shared Services VPCs to consumer VPCs
+      - Retrofitting existing "brownfield" VPCs with transit connectivity
+    required: false
+    default: false
+    depends_on:
+      - tgw_core
+    menu:
+      group: Connectivity
+      order: 20
+    content:
+      xlsx_sheets: [ "VPCAttachments" ] # Placeholder
+
+  # 5. Hybrid Connections - Optional
+  - id: hybrid_attachments
+    name: Hybrid Connections
+    description: VPN, Direct Connect, and TGW Connect
+    explanation: |
+      Attach up to (2) hybrid connections with dynamic propagation.
+      Supported types:
+      - Site-to-Site VPN
+      - Direct Connect Gateways
+      - Transit Gateway Connect
+      - Network Function
+
+      **Common Scenarios:**
+      - Establishing hybrid connectivity to on-premises data centers
+      - Integrating SD-WAN appliances via TGW Connect (GRE)
+      - Inserting third-party security appliances (Network Functions)
+    required: false
+    default: false
+    depends_on:
+      - tgw_core
+    menu:
+      group: Connectivity
+      order: 21
+    content:
+      xlsx_sheets: [ "HybridAttachments" ] # Placeholder
+
+  # 6. Monitoring - Optional
+  - id: monitoring
+    name: Monitoring
+    description: CloudWatch Metrics and Logging
+    explanation: |
+      Configure CloudWatch metrics for TGW and related infrastructure.
+      Includes Flow Logs and event monitoring.
+
+      **Common Scenarios:**
+      - Troubleshooting dropped packets and connectivity issues
+      - Auditing cross-VPC traffic for compliance and security
+      - Monitoring bandwidth utilization across attachments
+    required: false
+    default: true
+    depends_on:
+      - tgw_core
+    menu:
+      group: Operations
+      order: 30
+    content:
+      xlsx_sheets: [ "Monitoring" ] # Placeholder
