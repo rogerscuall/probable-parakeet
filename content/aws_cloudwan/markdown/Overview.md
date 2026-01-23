@@ -2,7 +2,7 @@
 
 ## Introduction
 
-AWS Cloud WAN is a managed wide-area networking (WAN) service that makes it easy to build, manage, and monitor a unified global network that connects resources running across your cloud and on-premises environments.+
+AWS Cloud WAN is a managed wide-area networking (WAN) service that makes it easy to build, manage, and monitor a unified global network that connects resources running across your cloud and on-premises environments.
 
 ## Key Benefits
 
