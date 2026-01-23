@@ -5,7 +5,7 @@
     "tree": {                                                                                                                                                                                                                                         
       "_files": [],                                                                                                                                                                                                                                   
       "labels": {                                                                                                                                                                                                                                     
-        "_files": ["aws_cloudwan.yaml", "aws_transit_gateway.yaml"]                                                                                                                                                                                   
+        "_files": ["aws_cloudwan.yaml", "aws_transit_gateway.yaml", "arista_evpn_vxlan.yaml"]                                                                                                                                                                                   
       }                                                                                                                                                                                                                                               
     }                                                                                                                                                                                                                                                 
 } 
