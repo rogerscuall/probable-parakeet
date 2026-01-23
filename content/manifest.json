@@ -17,7 +17,7 @@
           "ServiceInsertionAndNetworkFunctionGroup.md"
         ]
       },
-      "xlsx_templates": {
+      "templates": {
         "_files": [
           "cloudwan_template.xlsx"
         ]
