@@ -1,37 +1,62 @@
 {
   "version": "1.0",
-  "generated_at": "2024-01-15T10:30:00Z",
+  "generated_at": "2026-01-23T12:00:00Z",
   "generator": "ndp-manifest-tool",
   "tree": {
     "_files": [],
     "aws_cloudwan": {
-      "_files": [],
+      "_files": [
+        "README.md"
+      ],
       "markdown": {
         "_files": [
-          "intro.md",
-          "features.md",
-          "prerequisites.md"
+          "CloudWANCoreNetworks.md",
+          "CloudWANSegments.md",
+          "IngressDesign.md",
+          "Monitoring.md",
+          "Overview.md",
+          "SegmentSharing.md",
+          "SegmentStaticRouting.md",
+          "ServiceInsertionAndNetworkFunctionGroup.md"
         ]
       },
-      "templates": {
+      "xlsx_templates": {
         "_files": [
-          "cloudwan_template.xlsx",
-          "cloudwan_advanced.xlsx"
+          "cloudwan_template.xlsx"
         ]
       }
     },
-    "aws_transit_gateway": {
+    "azure_vwan": {
       "_files": [],
-      "markdown": {
-        "_files": [
-          "intro.md",
-          "overview.md"
-        ]
-      },
-      "templates": {
-        "_files": [
-          "tgw_template.xlsx"
-        ]
+      "v1.0.0": {
+        "_files": [],
+        "markdown": {
+          "_files": [
+            ".gitkeep"
+          ]
+        }
+      }
+    },
+    "gcp_ncc": {
+      "_files": [],
+      "v1.0.0": {
+        "_files": [],
+        "markdown": {
+          "_files": [
+            ".gitkeep"
+          ]
+        }
+      }
+    },
+    "multi_cloud": {
+      "_files": [],
+      "v1.0.0": {
+        "_files": [],
+        "markdown": {
+          "_files": [
+            ".gitkeep"
+          ]
+        }
       }
     }
   }
