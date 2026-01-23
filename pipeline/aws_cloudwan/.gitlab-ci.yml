@@ -1,0 +1,76 @@
+stages:
+  - validate
+  - generate
+  - plan
+  - apply
+
+variables:
+  TF_VERSION: "1.6.0"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+.terraform:
+  image: hashicorp/terraform:${TF_VERSION}
+  before_script:
+    - cd terraform
+
+.python:
+  image: python:3.11-slim
+
+validate:
+  extends: .python
+  stage: validate
+  script:
+    - python pipeline/scripts/validate.py data/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+generate-terraform:
+  extends: .python
+  stage: generate
+  script:
+    - python pipeline/scripts/generate_terraform.py data/ --output terraform/
+  artifacts:
+    paths:
+      - terraform/
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+generate-policy:
+  extends: .python
+  stage: generate
+  needs:
+    - generate-terraform
+  script:
+    - python pipeline/scripts/generate_policy.py data/ --output terraform/policy.json
+  artifacts:
+    paths:
+      - terraform/
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+terraform-plan:
+  extends: .terraform
+  stage: plan
+  script:
+    - terraform init
+    - terraform plan -out=tfplan
+  artifacts:
+    paths:
+      - terraform/tfplan
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+terraform-apply:
+  extends: .terraform
+  stage: apply
+  script:
+    - terraform init
+    - terraform apply -auto-approve tfplan
+  dependencies:
+    - terraform-plan
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  environment:
+    name: production

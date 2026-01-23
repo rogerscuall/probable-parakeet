@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "generated_at": "2024-01-15T10:30:00Z",
+  "generator": "ndp-manifest-tool",
+  "tree": {
+    "_files": [],
+    "aws_cloudwan": {
+      "_files": [
+        ".gitlab-ci.yml",
+        "Makefile"
+      ],
+      "scripts": {
+        "_files": [
+          "generate_policy.py",
+          "generate_terraform.py",
+          "validate.py"
+        ]
+      }
+    },
+    "aws_transit_gateway": {
+      "_files": [
+        ".gitlab-ci.yml",
+        "Makefile"
+      ],
+      "scripts": {
+        "_files": [
+          "generate.py",
+          "validate.py"
+        ]
+      }
+    }
+  }
+}
