@@ -2,7 +2,7 @@
 
 ## Overview
 
-Segments provide logical isolation within your Cloud WAN. They allow you to group VPCs and other attachments based on business requirements, security policies, or traffic patterns.
+Segments provide logical isolation within your Cloud WAN. They allow you to group VPCs and other attachments based on business requirements, security policies, or traffic patterns. +++
 
 ## Segment Design Considerations
 
