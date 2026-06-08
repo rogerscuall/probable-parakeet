@@ -23,6 +23,41 @@
         ]
       }
     },
+    "arista_evpn_vxlan": {
+      "_files": [
+        "README.md"
+      ],
+      "markdown": {
+        "_files": [
+          "AnycastGateway.md",
+          "BGPAddressFamilies.md",
+          "BGPPolicyAndFiltering.md",
+          "BUMTrafficOptimization.md",
+          "BorderLeafArchitecture.md",
+          "DataCenterInterconnect.md",
+          "EVPNRouteReflectors.md",
+          "EVPNRouteTypes.md",
+          "FirewallIntegration.md",
+          "LeafLayerOverview.md",
+          "LoadBalancerIntegration.md",
+          "MonitoringOverview.md",
+          "MulticastOverview.md",
+          "ServiceInsertionOverview.md",
+          "SpineLayerOverview.md",
+          "StreamingTelemetry.md",
+          "SuperSpineDesignPatterns.md",
+          "SuperSpineOverview.md",
+          "VLANtoVXLANMapping.md",
+          "VRFsAndTenantIsolation.md",
+          "VXLANandVTEP.md"
+        ]
+      },
+      "templates": {
+        "_files": [
+          "cloudwan_template.xlsx"
+        ]
+      }
+    },
     "azure_vwan": {
       "_files": [],
       "v1.0.0": {
