@@ -13,11 +13,11 @@ arista_evpn_vxlan/
 └── templates/          # Excel input template (main-template.xlsx)
 ```
 
-> **Note:** This repo stores the template as `main-template.xlsx`. The
-> application currently loads the template by the fixed filename
-> `cloudwan_template.xlsx` under `templates/` (see `TemplateService` in the
-> app), so the app-side copy keeps that name until the loader is made
-> design-type aware.
+> **Note:** The canonical template is `main-template.xlsx`. The application
+> currently loads the template by the fixed filename `cloudwan_template.xlsx`
+> under `templates/` (see `TemplateService` in the app), so an identical
+> compatibility copy is kept under that name until the loader is made
+> design-type aware. When regenerating, refresh both files.
 
 ## Design Principles
 
@@ -80,4 +80,6 @@ The template is generated from the label YAML so the two never drift:
 python3 scripts/build_evpn_template.py \
   config/labels/arista_evpn_vxlan.yaml \
   content/arista_evpn_vxlan/templates/main-template.xlsx
+cp content/arista_evpn_vxlan/templates/main-template.xlsx \
+  content/arista_evpn_vxlan/templates/cloudwan_template.xlsx
 ```
