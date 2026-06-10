@@ -1,29 +1,47 @@
 slug: arista_evpn_vxlan
 name: Arista EVPN VXLAN Data Center Fabric
-description: Multi-tier EVPN VXLAN fabric design for modern data center networks
-version: "1.0.0"
+description: AVD-based EVPN VXLAN fabric design for modern data center networks
+version: "2.0.0"
+
+# This config mirrors the Arista AVD (Ansible Validated Designs) data model:
+#   Fabric        -> fabric-wide group_vars (fabric_name, protocols, mgmt, MTU, DNS/NTP)
+#   NodeTypes     -> node_type defaults (spine/l3leaf/l2leaf platform, pools, MLAG, STP)
+#   Devices       -> inventory hosts + per-node settings (id, mgmt_ip, MLAG group, ASN)
+#   Tenants/VRFs/VLANs -> network services (tenant, VRF/VNI, SVIs and L2 VLANs)
+#   ConnectedEndpoints -> server/endpoint adapters (ports, switches, vlans, port-channel)
+#   CloudVision   -> CVP/CVaaS telemetry target
+#
+# Values AVD derives automatically are intentionally NOT asked for:
+#   - per-device loopback / VTEP / router-id addresses (derived from pools + device id)
+#   - per-device management mask and ansible_host (mgmt_ip + fabric mgmt_prefix_length)
+#   - VRF route distinguishers / route targets (derived from VNIs)
+#   - per-VLAN VNIs (derived from tenant mac_vrf_vni_base + vlan_id)
+#   - uplink/downlink interface assignments (AVD default_interfaces; per-device
+#     uplink_switch_interfaces is an optional override only)
 
 labels:
-  # Super Spine - Required
-  - id: super_spine
-    name: Super Spine Layer
-    description: Top-tier spine layer for multi-pod architectures
+  # Fabric-wide settings - Required
+  - id: fabric
+    name: Fabric Settings
+    description: Fabric-wide underlay, overlay, and management settings
     explanation: |
-      The Super Spine layer provides the highest tier of connectivity
-      in a multi-pod or large-scale data center fabric architecture.
-      It interconnects multiple pod fabrics and provides DCI capabilities.
+      Fabric-wide settings apply to every device in the EVPN VXLAN fabric
+      and map to the AVD fabric-level group variables.
 
-      **Key Components:**
-      - High-density spine switches (typically 7800 series)
-      - EVPN multi-domain gateway functionality
-      - Inter-pod and inter-DC connectivity
-      - Routed underlay with BGP for scalability
+      **What you provide (one row):**
+      - Fabric name (the Ansible fabric container name, e.g. FABRIC)
+      - Underlay and overlay routing protocols (eBGP/eBGP is the
+        recommended Arista design)
+      - Management default gateway and a single prefix length applied to
+        every device management IP
+      - Point-to-point uplink MTU (9214 for hardware, 1500-1600 for
+        vEOS/cEOS labs)
+      - Optional DNS and NTP servers
 
-      **Common Scenarios:**
-      - Multi-pod data center deployments (5+ pods)
-      - Data center interconnect (DCI) architectures
-      - Scalable campus or metro fabric designs
-      - High-availability tier for critical infrastructure
+      **What is derived automatically:**
+      - Per-device management masks (mgmt_ip + mgmt_prefix_length)
+      - BGP peer-group structure and passwords
+      - P2P underlay addressing (from the node-type uplink pool)
     required: true
     default: true
     menu:
@@ -31,175 +49,219 @@ labels:
       order: 1
     content:
       markdown_files:
-        - SuperSpineOverview.md
-        - SuperSpineDesignPatterns.md
+        - BGPAddressFamilies.md
+        - EVPNRouteTypes.md
       xlsx_sheets:
-        - SuperSpine
+        - Fabric
       validation:
-        - sheet: SuperSpine
-          column: hostname
+        - sheet: Fabric
+          column: fabric_name
           field_type: identifier
           required: true
-        - sheet: SuperSpine
-          column: asn
-          field_type: asn
+        - sheet: Fabric
+          column: underlay_routing_protocol
+          field_type: enum
+          options:
+            - ebgp
+            - ospf
+            - isis
           required: true
-        - sheet: SuperSpine
-          column: loopback_ip
+        - sheet: Fabric
+          column: overlay_routing_protocol
+          field_type: enum
+          options:
+            - ebgp
+            - ibgp
+          required: true
+        - sheet: Fabric
+          column: mgmt_gateway
           field_type: ipv4
           required: true
-        - sheet: SuperSpine
-          column: router_id
-          field_type: ipv4
+        - sheet: Fabric
+          column: mgmt_prefix_length
+          field_type: positive_integer
           required: true
+        - sheet: Fabric
+          column: p2p_uplinks_mtu
+          field_type: positive_integer
+          required: false
+        - sheet: Fabric
+          column: dns_server
+          field_type: ipv4
+          required: false
+        - sheet: Fabric
+          column: ntp_server
+          field_type: hostname
+          required: false
 
-  # Spine - Required
-  - id: spine
-    name: Spine Layer
-    description: Pod-level spine layer configuration
+  # Topology - Required
+  - id: topology
+    name: Fabric Topology
+    description: Node-type defaults and per-device definitions
     explanation: |
-      The Spine layer provides the core routing and switching backbone
-      within each data center pod. It connects all leaf switches and
-      participates in the EVPN control plane.
+      The fabric topology is described in two compact sheets that map
+      directly to the AVD node_type data model.
 
-      **Key Components:**
-      - Spine switches (typically 7500/7280 series)
-      - BGP route reflectors for EVPN control plane
-      - ECMP routing across all leaf uplinks
-      - Underlay routing with eBGP or OSPF
+      **NodeTypes (one row per role: spine, l3leaf, l2leaf):**
+      - Platform (cEOS-lab, vEOS-lab, 7280R3, ...)
+      - Shared BGP ASN (spines share one ASN in the Arista eBGP design;
+        leave blank for leaves - their ASN is set per MLAG group)
+      - IPv4 pools: Loopback0, VTEP loopback, P2P uplinks, MLAG peer and
+        MLAG iBGP peering. Each device's addresses are carved from these
+        pools using its device id - individual IPs are never requested.
+      - Loopback offset when two roles share a loopback pool
+      - Virtual router MAC and spanning-tree defaults for leaves
+      - Uplink switches (defaults to every spine when left blank)
 
-      **Design Principles:**
-      - Pure layer 3 operation (routed access)
-      - No VLANs stretch across spines
-      - Symmetric bandwidth to all leafs
-      - Redundant control plane for high availability
-
-      This is a required component for any EVPN fabric design.
+      **Devices (one row per switch):**
+      - Hostname, node type, and a unique numeric id per role
+      - Management IP without mask (the fabric-wide prefix length is
+        applied, and the same address is reused for Ansible connectivity)
+      - MLAG node group: give the same group name to exactly two leaves
+        to form an MLAG pair
+      - BGP ASN per MLAG group (first row of the group is sufficient)
+      - Optional uplink switch interface override (comma-separated,
+        one per uplink switch) when the AVD default port allocation
+        does not match the cabling
     required: true
     default: true
     depends_on:
-      - super_spine
+      - fabric
     menu:
       group: Fabric Architecture
       order: 2
     content:
       markdown_files:
         - SpineLayerOverview.md
+        - LeafLayerOverview.md
         - EVPNRouteReflectors.md
+        - VXLANandVTEP.md
       xlsx_sheets:
-        - Spine
+        - NodeTypes
+        - Devices
       validation:
-        - sheet: Spine
-          column: hostname
-          field_type: identifier
-          required: true
-        - sheet: Spine
-          column: asn
-          field_type: asn
-          required: true
-        - sheet: Spine
-          column: loopback_ip
-          field_type: ipv4
-          required: true
-        - sheet: Spine
-          column: role
+        - sheet: NodeTypes
+          column: node_type
           field_type: enum
           options:
-            - route_reflector
             - spine
+            - l3leaf
+            - l2leaf
           required: true
-
-  # Leaf - Required
-  - id: leaf
-    name: Leaf Layer
-    description: Access layer switches with VTEP functionality
-    explanation: |
-      Leaf switches provide connectivity to compute, storage, and
-      services within the data center. They act as VXLAN Tunnel
-      Endpoints (VTEPs) for overlay network encapsulation.
-
-      **Key Components:**
-      - Top-of-Rack (ToR) switches (typically 7280/7050 series)
-      - VTEP for VXLAN encapsulation/decapsulation
-      - Anycast gateway for host default routing
-      - EVPN Type-2 (MAC/IP) and Type-5 (IP Prefix) route advertisement
-
-      **Common Leaf Types:**
-      - Compute leaf: Server connectivity (ESXi, bare metal)
-      - Storage leaf: SAN/NAS connectivity with specialized QoS
-      - Service leaf: Firewalls, load balancers, appliances
-      - Border leaf: External connectivity (see Border label)
-
-      Each leaf pair operates as an MLAG/vPC domain for redundancy.
-    required: true
-    default: true
-    depends_on:
-      - spine
-    menu:
-      group: Fabric Architecture
-      order: 3
-    content:
-      markdown_files:
-        - LeafLayerOverview.md
-        - VXLANandVTEP.md
-        - AnycastGateway.md
-      xlsx_sheets:
-        - Leaf
-      validation:
-        - sheet: Leaf
+        - sheet: NodeTypes
+          column: platform
+          field_type: identifier
+          required: true
+        - sheet: NodeTypes
+          column: bgp_as
+          field_type: asn
+          required: false
+        - sheet: NodeTypes
+          column: loopback_ipv4_pool
+          field_type: cidr
+          required: false
+        - sheet: NodeTypes
+          column: loopback_ipv4_offset
+          field_type: integer
+          required: false
+        - sheet: NodeTypes
+          column: vtep_loopback_ipv4_pool
+          field_type: cidr
+          required: false
+        - sheet: NodeTypes
+          column: uplink_ipv4_pool
+          field_type: cidr
+          required: false
+        - sheet: NodeTypes
+          column: mlag_peer_ipv4_pool
+          field_type: cidr
+          required: false
+        - sheet: NodeTypes
+          column: mlag_peer_l3_ipv4_pool
+          field_type: cidr
+          required: false
+        - sheet: NodeTypes
+          column: virtual_router_mac_address
+          field_type: mac_address
+          required: false
+        - sheet: NodeTypes
+          column: spanning_tree_mode
+          field_type: enum
+          options:
+            - mstp
+            - rstp
+            - rapid-pvst
+            - none
+          required: false
+        - sheet: NodeTypes
+          column: spanning_tree_priority
+          field_type: integer
+          required: false
+        - sheet: NodeTypes
+          column: uplink_switches
+          field_type: identifier_list
+          required: false
+        - sheet: Devices
           column: hostname
           field_type: identifier
           required: true
-        - sheet: Leaf
-          column: asn
-          field_type: asn
+        - sheet: Devices
+          column: node_type
+          field_type: enum
+          options:
+            - spine
+            - l3leaf
+            - l2leaf
           required: true
-        - sheet: Leaf
-          column: vtep_loopback
+        - sheet: Devices
+          column: id
+          field_type: positive_integer
+          required: true
+        - sheet: Devices
+          column: mgmt_ip
           field_type: ipv4
           required: true
-        - sheet: Leaf
-          column: mlag_domain_id
+        - sheet: Devices
+          column: node_group
           field_type: identifier
           required: false
-        - sheet: Leaf
-          column: leaf_type
-          field_type: enum
-          options:
-            - compute
-            - storage
-            - service
-            - border
-          required: true
+        - sheet: Devices
+          column: bgp_as
+          field_type: asn
+          required: false
+        - sheet: Devices
+          column: uplink_switch_interfaces
+          field_type: identifier_list
+          required: false
 
-  # VRFs and VLANs - Required
-  - id: vrfs_vlans
-    name: VRFs and VLANs
-    description: Layer 2 and layer 3 overlay segmentation
+  # Network Services - Required
+  - id: network_services
+    name: Network Services
+    description: Tenants, VRFs, SVIs, and layer 2 VLANs
     explanation: |
-      VRFs (Virtual Routing and Forwarding) provide layer 3 tenant
-      isolation, while VLANs provide layer 2 segments within each VRF.
-      Both are carried over the VXLAN overlay.
+      Network services describe the overlay segmentation and map to the
+      AVD tenants data model.
 
-      **VRF Configuration:**
-      - VRF Name and VNI (VXLAN Network Identifier)
-      - Route distinguisher (RD) and route target (RT)
-      - EVPN Type-5 routes for inter-VRF routing
+      **Tenants (one row per tenant):**
+      - Tenant name and mac_vrf_vni_base. Every VLAN VNI in the tenant is
+        derived as mac_vrf_vni_base + vlan_id, so per-VLAN VNIs are never
+        requested.
 
-      **VLAN Configuration:**
-      - VLAN ID and corresponding VNI mapping
-      - Anycast gateway IP and subnet
-      - Associated VRF membership
+      **VRFs (one row per VRF):**
+      - Owning tenant, VRF name, and VRF VNI. Route distinguishers and
+        route targets are derived automatically by AVD.
+      - Optional VTEP diagnostic loopback number and loopback IP range
+        (a unique address is carved per leaf from the range)
 
-      **Common Use Cases:**
-      - Tenant separation in multi-tenant environments
-      - Production/staging/development isolation
-      - Security zone segregation (trusted/DMZ/untrusted)
-      - Application tier separation (web/app/database)
+      **VLANs (one row per VLAN):**
+      - Owning tenant and VLAN ID
+      - VRF and anycast gateway (ip_address_virtual) for routed SVIs;
+        leave both blank for pure layer 2 VLANs bridged across the fabric
+      - Optional VLAN name (auto-generated when blank)
     required: true
     default: true
     depends_on:
-      - leaf
+      - topology
     menu:
       group: Overlay Network
       order: 10
@@ -207,322 +269,171 @@ labels:
       markdown_files:
         - VRFsAndTenantIsolation.md
         - VLANtoVXLANMapping.md
+        - AnycastGateway.md
       xlsx_sheets:
+        - Tenants
         - VRFs
         - VLANs
       validation:
+        - sheet: Tenants
+          column: tenant_name
+          field_type: identifier
+          required: true
+        - sheet: Tenants
+          column: mac_vrf_vni_base
+          field_type: positive_integer
+          required: true
+        - sheet: VRFs
+          column: tenant
+          field_type: identifier
+          required: true
         - sheet: VRFs
           column: vrf_name
           field_type: identifier
           required: true
         - sheet: VRFs
-          column: vni
+          column: vrf_vni
           field_type: vni
           required: true
         - sheet: VRFs
-          column: route_distinguisher
-          field_type: route_distinguisher
+          column: vtep_diagnostic_loopback
+          field_type: positive_integer
+          required: false
+        - sheet: VRFs
+          column: vtep_diagnostic_ip_range
+          field_type: cidr
+          required: false
+        - sheet: VLANs
+          column: tenant
+          field_type: identifier
           required: true
         - sheet: VLANs
           column: vlan_id
           field_type: vlan
           required: true
         - sheet: VLANs
-          column: vni
-          field_type: vni
-          required: true
-        - sheet: VLANs
-          column: anycast_gateway
-          field_type: ipv4_with_mask
-          required: true
+          column: name
+          field_type: identifier
+          required: false
         - sheet: VLANs
           column: vrf
           field_type: identifier
-          required: true
+          required: false
+        - sheet: VLANs
+          column: ip_address_virtual
+          field_type: ipv4_with_mask
+          required: false
 
-  # Border - Optional
-  - id: border
-    name: Border Leaf
-    description: External connectivity and DCI gateway
+  # Connected Endpoints - Optional
+  - id: connected_endpoints
+    name: Connected Endpoints
+    description: Servers and appliances attached to leaf switches
     explanation: |
-      Border leaf switches provide external connectivity from the
-      data center fabric to WAN, Internet, campus networks, or
-      other data center sites.
+      Connected endpoints describe how servers, firewalls, and other
+      devices attach to the leaf layer, mapping to the AVD
+      connected_endpoints data model.
 
-      **Key Functions:**
-      - Layer 3 gateway to external networks
-      - EVPN Type-5 route redistribution (fabric ↔ external)
-      - Data Center Interconnect (DCI) with stretched VLANs/VRFs
-      - NAT and firewall service integration points
-
-      **Border Types:**
-      - Internet edge: Egress/ingress for Internet traffic
-      - WAN edge: MPLS, SD-WAN, or leased line connectivity
-      - Campus edge: Integration with existing campus LAN
-      - DCI edge: EVPN multi-site with VXLAN or MPLS transport
-
-      **Design Patterns:**
-      - Centralized (dedicated border leaf pair)
-      - Distributed (compute leafs also act as border)
-      - Hierarchical (border ↔ firewall ↔ fabric)
+      **Each row is one adapter (a set of links configured identically):**
+      - Endpoint name and its ports (e.g. Ethernet1,Ethernet2)
+      - Switches and switch ports the endpoint connects to - lists are
+        comma-separated and must have the same length (one entry per link)
+      - Allowed VLANs (single IDs and ranges, e.g. 11-13,21,25,31)
+      - Port mode (access or trunk)
+      - Optional port-channel mode (active/passive/on) to bundle the
+        links - across an MLAG pair this creates an MLAG port-channel
+      - Optional spanning-tree portfast setting (edge for hosts)
     required: false
     default: true
     depends_on:
-      - leaf
+      - network_services
     menu:
-      group: External Connectivity
+      group: Endpoints
       order: 20
     content:
       markdown_files:
-        - BorderLeafArchitecture.md
-        - DataCenterInterconnect.md
+        - ConnectedEndpoints.md
       xlsx_sheets:
-        - BorderLeaf
+        - ConnectedEndpoints
       validation:
-        - sheet: BorderLeaf
-          column: hostname
+        - sheet: ConnectedEndpoints
+          column: endpoint_name
           field_type: identifier
           required: true
-        - sheet: BorderLeaf
-          column: border_type
+        - sheet: ConnectedEndpoints
+          column: endpoint_ports
+          field_type: identifier_list
+          required: true
+        - sheet: ConnectedEndpoints
+          column: switches
+          field_type: identifier_list
+          required: true
+        - sheet: ConnectedEndpoints
+          column: switch_ports
+          field_type: identifier_list
+          required: true
+        - sheet: ConnectedEndpoints
+          column: vlans
+          field_type: vlan_list
+          required: true
+        - sheet: ConnectedEndpoints
+          column: mode
           field_type: enum
           options:
-            - internet_edge
-            - wan_edge
-            - campus_edge
-            - dci_edge
+            - access
+            - trunk
           required: true
-        - sheet: BorderLeaf
-          column: external_asn
-          field_type: asn
+        - sheet: ConnectedEndpoints
+          column: port_channel_mode
+          field_type: enum
+          options:
+            - active
+            - passive
+            - "on"
+          required: false
+        - sheet: ConnectedEndpoints
+          column: spanning_tree_portfast
+          field_type: enum
+          options:
+            - edge
+            - network
           required: false
 
-  # Service Insertion - Optional
-  - id: service_insertion
-    name: Service Insertion
-    description: Firewall, load balancer, and appliance integration
+  # CloudVision - Optional
+  - id: cloudvision
+    name: CloudVision Telemetry
+    description: CloudVision Portal / CVaaS streaming telemetry target
     explanation: |
-      Service Insertion enables integration of stateful network
-      services (firewalls, load balancers, IDS/IPS) into the
-      data center fabric without disrupting the underlay or overlay.
+      CloudVision integration streams device state and telemetry to a
+      CloudVision Portal (on-prem CVP) or CVaaS instance and enables
+      change-control based deployment.
 
-      **Insertion Methods:**
-      - Routed mode: L3 service insertion (PBR or static routes)
-      - Transparent mode: L2 service insertion (VLAN stitching)
-      - One-arm mode: Asymmetric routing with service node
-      - Active-active clustering across multiple service nodes
+      **What you provide (one row):**
+      - CloudVision server (hostname for CVaaS, e.g. apiserver.arista.io,
+        or the on-prem CVP address with port, e.g. 172.20.20.100:9910)
+      - Optional VRF used to reach CloudVision (typically MGMT)
 
-      **Common Services:**
-      - Next-generation firewalls (Palo Alto, Cisco FTD, Fortinet)
-      - Load balancers (F5, Citrix ADC, A10)
-      - IDS/IPS systems (Cisco Firepower, Snort)
-      - SSL/TLS inspection proxies
-
-      **Design Considerations:**
-      - High availability and failover mechanisms
-      - Traffic symmetry and flow affinity
-      - Performance impact and throughput capacity
-      - Service chaining for multiple appliances
-    required: false
-    default: false
-    depends_on:
-      - leaf
-      - vrfs_vlans
-    menu:
-      group: Services
-      order: 30
-    content:
-      markdown_files:
-        - ServiceInsertionOverview.md
-        - FirewallIntegration.md
-        - LoadBalancerIntegration.md
-      xlsx_sheets:
-        - ServiceInsertion
-      validation:
-        - sheet: ServiceInsertion
-          column: service_name
-          field_type: identifier
-          required: true
-        - sheet: ServiceInsertion
-          column: service_type
-          field_type: enum
-          options:
-            - firewall
-            - load_balancer
-            - ids_ips
-            - proxy
-            - other
-          required: true
-        - sheet: ServiceInsertion
-          column: insertion_mode
-          field_type: enum
-          options:
-            - routed
-            - transparent
-            - one_arm
-          required: true
-        - sheet: ServiceInsertion
-          column: vrf
-          field_type: identifier
-          required: true
-
-  # BGP Address Family - Optional
-  - id: bgp_address_family
-    name: BGP Address Family Configuration
-    description: Advanced BGP and EVPN address family settings
-    explanation: |
-      BGP Address Family configuration controls route advertisement,
-      filtering, and policy for different address families in the
-      EVPN VXLAN fabric.
-
-      **Supported Address Families:**
-      - EVPN (L2VPN EVPN): For MAC/IP learning and VXLAN overlay
-      - IPv4 Unicast: For underlay routing and VRF routing
-      - IPv6 Unicast: For IPv6 underlay and overlay support
-      - VPNv4/VPNv6: For MPLS VPN integration scenarios
-
-      **Configuration Options:**
-      - Route reflection and BGP peering strategies
-      - Route filtering with route maps and prefix lists
-      - Route aggregation and summarization
-      - BGP communities and extended communities
-      - Graceful restart and NSR for high availability
-      - BFD (Bidirectional Forwarding Detection) for fast failover
-
-      **Advanced Features:**
-      - EVPN Type-2 with host routes (per-host /32)
-      - EVPN Type-5 with IP prefix routes (summarization)
-      - Selective VNI advertisement (RT filtering)
-      - BGP EVPN route suppression and dampening
-    required: false
-    default: false
-    depends_on:
-      - spine
-      - leaf
-    menu:
-      group: Routing Protocol
-      order: 40
-    content:
-      markdown_files:
-        - BGPAddressFamilies.md
-        - EVPNRouteTypes.md
-        - BGPPolicyAndFiltering.md
-      xlsx_sheets:
-        - BGPAddressFamily
-      validation:
-        - sheet: BGPAddressFamily
-          column: device_hostname
-          field_type: identifier
-          required: true
-        - sheet: BGPAddressFamily
-          column: address_family
-          field_type: enum
-          options:
-            - evpn
-            - ipv4_unicast
-            - ipv6_unicast
-            - vpnv4
-            - vpnv6
-          required: true
-        - sheet: BGPAddressFamily
-          column: route_reflector_client
-          field_type: yes_no
-          required: false
-
-  # Multicast - Optional
-  - id: multicast
-    name: Multicast Configuration
-    description: Overlay and underlay multicast for BUM traffic
-    explanation: |
-      Multicast configuration optimizes Broadcast, Unknown unicast,
-      and Multicast (BUM) traffic handling in the VXLAN overlay.
-
-      **Overlay Multicast:**
-      - Head-end replication (HER): Unicast replication at source VTEP
-      - Multicast replication: Uses underlay multicast groups
-      - Ingress replication: Hybrid approach for efficiency
-
-      **Underlay Multicast:**
-      - PIM Sparse Mode for efficient multicast routing
-      - Anycast RP for redundancy
-      - SSM (Source-Specific Multicast) for optimized delivery
-
-      **Use Cases:**
-      - Optimizing BUM traffic in large-scale fabrics
-      - Supporting application-level multicast (video, clustering)
-      - Reducing control plane overhead
-    required: false
-    default: false
-    depends_on:
-      - spine
-      - leaf
-    menu:
-      group: Advanced Features
-      order: 50
-    content:
-      markdown_files:
-        - MulticastOverview.md
-        - BUMTrafficOptimization.md
-      xlsx_sheets:
-        - Multicast
-      validation:
-        - sheet: Multicast
-          column: replication_mode
-          field_type: enum
-          options:
-            - head_end_replication
-            - multicast
-            - ingress_replication
-          required: true
-
-  # Monitoring and Telemetry - Optional
-  - id: monitoring
-    name: Monitoring and Telemetry
-    description: Streaming telemetry, sFlow, and event monitoring
-    explanation: |
-      Modern monitoring and telemetry for real-time visibility
-      into fabric health, performance, and security.
-
-      **Telemetry Options:**
-      - Streaming telemetry (gNMI, OpenConfig)
-      - sFlow for traffic sampling and analysis
-      - NetFlow/IPFIX for flow-based monitoring
-      - SNMP for legacy integration
-      - Syslog for event correlation
-
-      **Monitoring Tools:**
-      - CloudVision Portal (CVP) for Arista-native management
-      - Third-party NMS (SolarWinds, PRTG, LibreNMS)
-      - Analytics platforms (Splunk, ELK stack)
-      - Performance monitoring (Grafana, Prometheus)
-
-      **Common Scenarios:**
-      - Troubleshooting EVPN convergence issues
-      - Capacity planning and traffic engineering
-      - Security monitoring and anomaly detection
-      - Compliance auditing and reporting
+      **What is derived automatically:**
+      - TerminAttr daemon configuration (smash excludes, auth method)
+      - Device onboarding token handling
     required: false
     default: true
     depends_on:
-      - spine
-      - leaf
+      - fabric
     menu:
       group: Operations
-      order: 60
+      order: 30
     content:
       markdown_files:
         - MonitoringOverview.md
         - StreamingTelemetry.md
       xlsx_sheets:
-        - Monitoring
+        - CloudVision
       validation:
-        - sheet: Monitoring
-          column: telemetry_type
-          field_type: enum
-          options:
-            - streaming_telemetry
-            - sflow
-            - netflow
-            - snmp
-            - syslog
+        - sheet: CloudVision
+          column: cv_server
+          field_type: hostname
           required: true
+        - sheet: CloudVision
+          column: cv_vrf
+          field_type: identifier
+          required: false

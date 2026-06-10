@@ -132,7 +132,28 @@
         "field_type": {
           "type": "string",
           "description": "Type of validation",
-          "enum": ["aws_region", "aws_region_list", "cidr", "cidr_list", "asn", "identifier", "yes_no", "enum"]
+          "enum": [
+            "aws_region",
+            "aws_region_list",
+            "cidr",
+            "cidr_list",
+            "asn",
+            "identifier",
+            "identifier_list",
+            "yes_no",
+            "enum",
+            "ip",
+            "ipv4",
+            "ipv4_with_mask",
+            "hostname",
+            "mac_address",
+            "vlan",
+            "vlan_list",
+            "vni",
+            "route_distinguisher",
+            "integer",
+            "positive_integer"
+          ]
         },
         "required": {
           "type": "boolean",

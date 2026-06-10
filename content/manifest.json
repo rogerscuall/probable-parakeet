@@ -34,6 +34,7 @@
           "BGPPolicyAndFiltering.md",
           "BUMTrafficOptimization.md",
           "BorderLeafArchitecture.md",
+          "ConnectedEndpoints.md",
           "DataCenterInterconnect.md",
           "EVPNRouteReflectors.md",
           "EVPNRouteTypes.md",
@@ -54,7 +55,8 @@
       },
       "templates": {
         "_files": [
-          "cloudwan_template.xlsx"
+          "cloudwan_template.xlsx",
+          "main-template.xlsx"
         ]
       }
     },
