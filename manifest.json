@@ -18,12 +18,18 @@
     {
       "slug": "arista_evpn_vxlan",
       "name": "Arista EVPN VXLAN Data Center Fabric",
-      "latestVersion": "v1.0.0",
+      "latestVersion": "v2.0.0",
       "versions": [
+        {
+          "version": "v2.0.0",
+          "releaseDate": "2026-06-09",
+          "status": "stable",
+          "minAppVersion": "1.0.0"
+        },
         {
           "version": "v1.0.0",
           "releaseDate": "2026-06-08",
-          "status": "stable",
+          "status": "deprecated",
           "minAppVersion": "1.0.0"
         }
       ]
