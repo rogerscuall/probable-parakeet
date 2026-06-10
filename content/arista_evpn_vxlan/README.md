@@ -5,6 +5,13 @@ design documentation. The data model mirrors Arista AVD (Ansible Validated
 Designs): the spreadsheet a user fills in maps 1:1 onto the AVD `inventory.yml`
 and `group_vars/` structure.
 
+## Versions
+
+| Version | Status | Release Date | Notes |
+|---------|--------|--------------|-------|
+| v2.0.0  | Stable | 2026-06-09   | AVD-aligned labels and simplified template (`main-template.xlsx`) |
+| v1.0.0  | Deprecated | 2026-06-08 | Initial release |
+
 ## Content Structure
 
 ```
@@ -50,9 +57,10 @@ project. Anything AVD can derive is never asked for:
 | MonitoringOverview.md | cloudvision | Telemetry options and what to watch |
 | StreamingTelemetry.md | cloudvision | gNMI/OpenConfig streaming telemetry |
 
-The remaining markdown files (SuperSpine\*, Border\*, ServiceInsertion,
-Firewall/LoadBalancer, Multicast/BUM, BGPPolicyAndFiltering) are reference
-material not currently linked to a label; they are kept for future labels.
+The remaining markdown files (SuperSpine\*, BorderLeafArchitecture,
+DataCenterInterconnect, ServiceInsertion, Firewall/LoadBalancer, Multicast/BUM,
+BGPPolicyAndFiltering) are reference material not currently linked to a label;
+they are kept for future labels.
 
 ## XLSX Template Sheets
 

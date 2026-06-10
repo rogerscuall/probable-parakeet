@@ -30,12 +30,13 @@ remote_location/
 
 Each design type represents a specific network architecture:
 
-| Design Type     | Description                                    |
-|-----------------|------------------------------------------------|
-| aws_cloudwan    | AWS Cloud WAN network architecture             |
-| azure_vwan      | Azure Virtual WAN (future)                     |
-| gcp_ncc         | Google Cloud Network Connectivity Center       |
-| multi_cloud     | Multi-cloud networking patterns (future)       |
+| Design Type       | Description                                    |
+|-------------------|------------------------------------------------|
+| aws_cloudwan      | AWS Cloud WAN network architecture             |
+| arista_evpn_vxlan | Arista EVPN VXLAN data center fabric           |
+| azure_vwan        | Azure Virtual WAN (future)                     |
+| gcp_ncc           | Google Cloud Network Connectivity Center       |
+| multi_cloud       | Multi-cloud networking patterns (future)       |
 
 ## Versioning
 
