@@ -35,7 +35,7 @@ def main():
     try:
         from pyavd import validate_inputs
     except ImportError:
-        print("Install dependencies first: python -m pip install -r requirements.txt", file=sys.stderr)
+        print("Install dependencies first: make install (requires uv)", file=sys.stderr)
         return 1
 
     try:
