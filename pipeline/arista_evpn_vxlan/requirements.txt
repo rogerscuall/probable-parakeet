@@ -1,0 +1,2 @@
+# Keep PyAVD aligned with the collection version in requirements.yml.
+pyavd[ansible]==5.7.3

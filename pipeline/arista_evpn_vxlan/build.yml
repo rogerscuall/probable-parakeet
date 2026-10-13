@@ -1,0 +1,17 @@
+---
+- name: Build EOS configurations and documentation
+  hosts: "{{ fabric_name | default('FABRIC') }}"
+  gather_facts: false
+  connection: local
+  vars:
+    # Keep artifacts in the project root, even with a nested inventory path.
+    root_dir: "{{ playbook_dir }}"
+    avd_data_validation_mode: error
+  tasks:
+    - name: Generate structured configurations and fabric documentation
+      ansible.builtin.import_role:
+        name: arista.avd.eos_designs
+
+    - name: Generate EOS configurations and device documentation
+      ansible.builtin.import_role:
+        name: arista.avd.eos_cli_config_gen

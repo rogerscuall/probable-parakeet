@@ -1,0 +1,37 @@
+stages:
+  - validate
+  - build
+
+default:
+  image: python:3.12-slim
+  before_script:
+    - python -m pip install -r requirements.txt
+    - ansible-galaxy collection install -r requirements.yml
+
+variables:
+  ANSIBLE_CONFIG: "$CI_PROJECT_DIR/ansible.cfg"
+  INVENTORY: "inventory.yml"
+  FABRIC: "FABRIC"
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
+validate:
+  stage: validate
+  script:
+    - python scripts/validate_avd.py "$INVENTORY" --fabric "$FABRIC"
+    - ansible-playbook -i "$INVENTORY" build.yml -e "fabric_name=$FABRIC" --syntax-check
+
+build:
+  stage: build
+  script:
+    - ansible-playbook -i "$INVENTORY" build.yml -e "fabric_name=$FABRIC"
+  artifacts:
+    paths:
+      - intended/
+      - documentation/
+    expire_in: 1 week
