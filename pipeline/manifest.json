@@ -4,6 +4,21 @@
   "generator": "ndp-manifest-tool",
   "tree": {
     "_files": [],
+    "arista_evpn_vxlan": {
+      "_files": [
+        ".gitlab-ci.yml",
+        "Makefile",
+        "ansible.cfg",
+        "build.yml",
+        "requirements.txt",
+        "requirements.yml"
+      ],
+      "scripts": {
+        "_files": [
+          "validate_avd.py"
+        ]
+      }
+    },
     "aws_cloudwan": {
       "_files": [
         ".gitlab-ci.yml",
