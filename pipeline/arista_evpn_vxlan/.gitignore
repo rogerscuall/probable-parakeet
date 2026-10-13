@@ -1,0 +1,6 @@
+.venv/
+.ansible/
+pyproject.toml
+uv.lock
+__pycache__/
+tests/.work/
